@@ -1,5 +1,7 @@
 # TS_TextMarkerViewer
 
+Hinweis: In diesem Repository wurde KI als Werkzeug zur Codegenerierung und Ueberarbeitung genutzt.
+
 ![TS_TextMarkerViewer Demo UI](docs/images/viewer-demo-annotations.png)
 
 Framework-unabhaengige TypeScript-Web-Component zum Anzeigen von PDF- und TXT-Dokumenten mit Suche und read-only Annotationen.
@@ -198,6 +200,8 @@ import type { TSTextMarkerViewer } from "@datenflix/ts-text-marker-viewer";
 ![Annotationsmodus](docs/images/viewer-demo-annotations.png)
 
 ### Annotationen Variante 2
+
+Diese Darstellungsvariante ist an die attraktive UI von Inception angelehnt. Sie hat nicht den Anspruch, Inception zu ersetzen, sondern empfindet die dortige Annotationsdarstellung fuer den read-only Viewer nach.
 
 ![Annotationsmodus Variante 2](docs/images/viewer-demo-annotations-bracket.png)
 
