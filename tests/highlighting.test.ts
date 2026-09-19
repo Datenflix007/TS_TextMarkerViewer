@@ -1,0 +1,74 @@
+import { describe, expect, it } from "vitest";
+import type { AnnotationDocument } from "../src/core";
+import {
+  annotationHighlightRanges,
+  findTextRanges,
+  searchHighlightRanges
+} from "../src/viewer/highlighting/textRanges";
+
+const text = "Bellum venit. bellum manet. Vespasianus bellum audit.";
+
+const annotationDocument: AnnotationDocument = {
+  version: "1.0",
+  document: {
+    id: "demo",
+    type: "txt"
+  },
+  labels: [
+    { id: "conflict", name: "Konflikt", color: "#ff9800" },
+    { id: "person", name: "Person", color: "#7e57c2" }
+  ],
+  annotations: [
+    {
+      id: "ann-occurrence",
+      labelId: "conflict",
+      quote: "bellum",
+      occurrence: 2
+    },
+    {
+      id: "ann-range",
+      labelId: "person",
+      quote: "Vespasianus",
+      start: 28,
+      end: 39
+    }
+  ]
+};
+
+describe("text range helpers", () => {
+  it("finds search hits", () => {
+    expect(findTextRanges(text, "venit")).toEqual([{ start: 7, end: 12 }]);
+  });
+
+  it("finds multiple case-insensitive search hits", () => {
+    expect(searchHighlightRanges(text, "bellum")).toHaveLength(3);
+  });
+
+  it("locates an annotation by occurrence", () => {
+    expect(annotationHighlightRanges(text, annotationDocument)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          annotationId: "ann-occurrence",
+          start: 14,
+          end: 20,
+          label: "Konflikt",
+          color: "#ff9800"
+        })
+      ])
+    );
+  });
+
+  it("locates an annotation by start/end", () => {
+    expect(annotationHighlightRanges(text, annotationDocument)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          annotationId: "ann-range",
+          start: 28,
+          end: 39,
+          label: "Person",
+          color: "#7e57c2"
+        })
+      ])
+    );
+  });
+});

@@ -1,10 +1,9 @@
-export { TSTextMarkerViewer } from "./TS_TextMarkerViewer";
-export { JOSEPHUS_DEMO_TEXT, JOSEPHUS_DEMO_ANNOTATIONS } from "./demoData";
-export type { MarkerMode, TextAnnotation } from "./types";
+export { TSTextMarkerViewer } from "./viewer";
+export type { ViewerMode } from "./viewer";
 
-import { TSTextMarkerViewer } from "./TS_TextMarkerViewer";
+import { TSTextMarkerViewer } from "./viewer";
 
-if (!customElements.get("ts-text-marker-viewer")) {
+if (typeof customElements !== "undefined" && !customElements.get("ts-text-marker-viewer")) {
   customElements.define("ts-text-marker-viewer", TSTextMarkerViewer);
 }
 

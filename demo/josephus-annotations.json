@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "document": {
+    "id": "josephus-demo",
+    "title": "Flavius Josephus - Bellum Judaicum",
+    "type": "txt"
+  },
+  "labels": [
+    {
+      "id": "person",
+      "name": "Person",
+      "color": "#7e57c2"
+    },
+    {
+      "id": "place",
+      "name": "Ort",
+      "color": "#ef5350"
+    },
+    {
+      "id": "conflict",
+      "name": "Konflikt",
+      "color": "#ff9800"
+    },
+    {
+      "id": "actor",
+      "name": "Akteur",
+      "color": "#26a69a"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "ann-person-vespasianus",
+      "labelId": "person",
+      "quote": "Vespasianus",
+      "occurrence": 1
+    },
+    {
+      "id": "ann-person-titus",
+      "labelId": "person",
+      "quote": "Titus",
+      "occurrence": 1
+    },
+    {
+      "id": "ann-place-hierosolyma",
+      "labelId": "place",
+      "quote": "Hierosolyma"
+    },
+    {
+      "id": "ann-place-iudaea",
+      "labelId": "place",
+      "quote": "Iudaea"
+    },
+    {
+      "id": "ann-conflict-bellum",
+      "labelId": "conflict",
+      "quote": "bellum"
+    },
+    {
+      "id": "ann-actor-romani",
+      "labelId": "actor",
+      "quote": "Romani"
+    }
+  ]
+}

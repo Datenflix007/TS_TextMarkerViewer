@@ -1,95 +1,213 @@
 # TS_TextMarkerViewer
 
-Kleine framework-unabhängige TypeScript-Web-Component zum Anzeigen und Markieren von PDF- und TXT-Dokumenten.
+Framework-unabhaengige TypeScript-Web-Component zum Anzeigen von PDF- und TXT-Dokumenten mit Suche und read-only Annotationen.
 
-## Funktionen
+Der Viewer enthaelt keine Editorlogik: Er erstellt, veraendert, loescht und speichert keine Annotationen. Annotationen werden als `AnnotationDocument` aus dem Core-Modell uebergeben und nur dargestellt.
 
-- PDF-Darstellung über PDF.js als gerenderte Originalseiten.
-- TXT-Darstellung als dokumentartige Seite mit erhaltener Zeilen-/Absatzstruktur.
-- Suchmodus: alle Vorkommen eines Worts/einer Phrase markieren.
-- Annotationsmodus: unterschiedliche Textstellen mit Farbe und Label markieren.
-- Browser-Dateiauswahl für `.pdf` und `.txt`.
-- Programmierschnittstelle für die Einbettung in andere TypeScript-UIs.
-- Josephus-Demo ohne externe Datei.
-
-## Start
+## Installation
 
 ```bash
 npm install
-npm run dev
 ```
 
-oder mit `just`:
+Spaeter vorgesehen:
 
 ```bash
-just install
-just dev
+npm install @datenflix/ts-text-marker-viewer
 ```
 
-## Einbindung
-
-```ts
-import "@datenflix/ts-text-marker-viewer";
-import type { TSTextMarkerViewer } from "@datenflix/ts-text-marker-viewer";
-
-const viewer = document.querySelector<TSTextMarkerViewer>("#viewer")!;
-
-await viewer.setMode("search");
-await viewer.setSearchTerm("bellum");
-```
+## Grundverwendung
 
 ```html
 <ts-text-marker-viewer id="viewer"></ts-text-marker-viewer>
 ```
 
-### Annotationen
-
 ```ts
-viewer.setAnnotations([
-  {
-    id: "person-1",
-    quote: "Romani",
-    label: "Akteur: Römer",
-    color: "#7e57c2"
-  },
-  {
-    id: "place-1",
-    quote: "Hierosolyma",
-    label: "Ort: Jerusalem",
-    color: "#ef5350"
-  }
-]);
+import "@datenflix/ts-text-marker-viewer";
+import type { TSTextMarkerViewer } from "@datenflix/ts-text-marker-viewer";
 
-await viewer.setMode("annotations");
+const viewer = document.querySelector<TSTextMarkerViewer>(
+  "ts-text-marker-viewer"
+);
+
+await viewer?.loadText("bellum et pax", {
+  id: "demo",
+  title: "Demo",
+  type: "txt"
+});
 ```
 
-Optional können PDF-Seite und Vorkommen eingeschränkt werden:
+## Oeffentliche API
 
 ```ts
-{
-  id: "war-2",
-  quote: "bellum",
-  label: "zweites Vorkommen auf Seite 3",
-  color: "#ff9800",
-  page: 3,
-  occurrence: 2
+loadFile(file: File): Promise<void>;
+loadText(text: string, metadata?: DocumentMetadata): Promise<void>;
+setMode(mode: "search" | "annotations"): void;
+setSearchTerm(term: string): void;
+setAnnotationDocument(document: AnnotationDocument): void;
+clearSearch(): void;
+goToPage(page: number): void;
+setZoom(zoom: number): void;
+getCurrentPage(): number;
+getPageCount(): number;
+getZoom(): number;
+```
+
+Die Web Component wird automatisch registriert:
+
+```ts
+if (!customElements.get("ts-text-marker-viewer")) {
+  customElements.define("ts-text-marker-viewer", TSTextMarkerViewer);
 }
 ```
 
-## PDF/OCR-Hinweis
+## Verwendung Mit Core
 
-Die PDF-Seite selbst wird als Canvas gerendert, deshalb bleibt das sichtbare Layout des PDF erhalten. Die Markierungen werden anhand der Textschicht des PDF berechnet.
+Das zentrale JSON-Modell liegt in `src/core` und ist so vorbereitet, dass es spaeter als `@datenflix/ts-text-marker-core` ausgelagert werden kann.
 
-Das bedeutet:
+```ts
+import type {
+  AnnotationDocument
+} from "@datenflix/ts-text-marker-core";
 
-- normales PDF mit Text: funktioniert;
-- gescanntes PDF mit vorhandener OCR-Textschicht: funktioniert;
-- reines Bild-PDF ohne OCR-Textschicht: wird angezeigt, kann aber noch nicht durchsucht/markiert werden.
+const annotations: AnnotationDocument = {
+  version: "1.0",
+  document: {
+    id: "josephus-demo",
+    title: "Flavius Josephus - Bellum Judaicum",
+    type: "txt"
+  },
+  labels: [
+    { id: "person", name: "Person", color: "#7e57c2" },
+    { id: "place", name: "Ort", color: "#ef5350" },
+    { id: "conflict", name: "Konflikt", color: "#ff9800" }
+  ],
+  annotations: [
+    {
+      id: "ann-001",
+      labelId: "person",
+      quote: "Vespasianus"
+    }
+  ]
+};
 
-Für reine Bildscans kann später z. B. ein OCR-Adapter ergänzt werden, der erkannte Wörter samt Bounding Boxes an den Viewer übergibt.
+viewer?.setAnnotationDocument(annotations);
+```
 
-## Bewusste Vereinfachungen der Version 0.1
+Labels liefern Anzeigename und Farbe. Annotationen referenzieren Labels ueber `labelId`; dadurch werden Farbe und Anzeigename nicht redundant in jeder Annotation gespeichert.
 
-- PDF-Markierungen werden aus PDF.js-Textitems geometrisch angenähert; für komplexe Schriften/Rotationen kann eine spätere TextLayer-Integration genauer sein.
-- Überlappende TXT-Annotationen werden in dieser einfachen Version nicht verschachtelt.
-- Zoom, Seiten-Navigation, Miniaturen und persistente Annotationen sind noch nicht enthalten.
+## PDF Laden
+
+```ts
+await viewer?.loadFile(pdfFile);
+```
+
+PDFs werden mit `pdfjs-dist` als Canvas-Seiten gerendert. Das originale Layout bleibt sichtbar; Suche und Annotationen werden aus der vorhandenen Textschicht als Layer darueber gelegt. Reine Bildscans werden angezeigt, aber ohne OCR-Textschicht nicht durchsucht.
+
+## TXT Laden
+
+```ts
+await viewer?.loadFile(txtFile);
+```
+
+oder direkt:
+
+```ts
+await viewer?.loadText("Vespasianus bellum narrat.", {
+  id: "txt-demo",
+  title: "TXT Demo",
+  type: "txt"
+});
+```
+
+TXT wird als Dokumentseite mit weissem Seitenhintergrund, Schatten, angenehmer Satzbreite und erhaltenen Absatzumbruechen dargestellt. Der Text bleibt selektierbar.
+
+## Suche
+
+```ts
+viewer?.setMode("search");
+viewer?.setSearchTerm("bellum");
+```
+
+Die Suche ist standardmaessig case-insensitive und markiert alle Treffer neutral gelb. Annotationfarben werden dadurch nicht veraendert.
+
+## Annotationen
+
+```ts
+viewer?.setMode("annotations");
+viewer?.setAnnotationDocument(annotationDocument);
+```
+
+Annotationen koennen ueber `quote`, `page`, `occurrence` sowie bei TXT ueber `start` und `end` lokalisiert werden. Das Datenmodell enthaelt zudem eine optionale `boundingBox`, damit spaeter exaktere PDF- und OCR-Integrationen moeglich sind.
+
+## Demo
+
+Die Demo unter `demo/` ist wie eine Consumer-Anwendung aufgebaut. `demo/main.ts` importiert nur oeffentliche APIs:
+
+```ts
+import "@datenflix/ts-text-marker-viewer";
+import type { AnnotationDocument } from "@datenflix/ts-text-marker-core";
+import type { TSTextMarkerViewer } from "@datenflix/ts-text-marker-viewer";
+```
+
+### Suchmodus
+
+![Suchmodus](docs/images/viewer-demo-search.png)
+
+### Annotationen
+
+![Annotationsmodus](docs/images/viewer-demo-annotations.png)
+
+### Dokumentansicht
+
+![Dokumentenansicht](docs/images/viewer-demo-document.png)
+
+Die Screenshots werden aus der echten Demo erzeugt:
+
+```bash
+npm run screenshots
+```
+
+## Architektur
+
+```text
+                    +-----------------------+
+                    | TS_TextMarker_Core    |
+                    | JSON / Types / Schema |
+                    +-----------+-----------+
+                                |
+                    +-----------v-----------+
+                    | TS_TextMarker_Viewer  |
+                    | PDF / TXT / Highlights|
+                    +-----------+-----------+
+                                |
+                    +-----------v-----------+
+                    | TS_TextMarker_Editor  |
+                    | Bearbeitung           |
+                    +-----------------------+
+```
+
+- Core enthaelt Datenmodell, Validierung, Serialisierung und dokumentunabhaengige Hilfsfunktionen.
+- Viewer ist read-only und importiert Core-Typen ueber `src/core`.
+- Editor wird spaeter auf Viewer und Core aufgebaut und bleibt getrennt vom Viewer.
+
+Weitere Details stehen in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Entwicklung
+
+```bash
+npm run dev
+npm run lint
+npm run build
+npm test
+npm run test:e2e
+```
+
+Mit `just`:
+
+```bash
+just install
+just dev
+just check
+just screenshots
+```

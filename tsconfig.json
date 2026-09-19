@@ -11,9 +11,19 @@
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@datenflix/ts-text-marker-viewer": [
+        "src/index.ts"
+      ],
+      "@datenflix/ts-text-marker-core": [
+        "src/core/index.ts"
+      ]
+    },
     "strict": true,
     "types": [
       "vite/client",
@@ -23,6 +33,7 @@
   "include": [
     "src",
     "demo",
+    "tests",
     "vite.config.ts"
   ]
 }
