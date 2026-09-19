@@ -52,7 +52,8 @@ export function searchHighlightRanges(text: string, query: string): HighlightRan
 export function annotationHighlightRanges(
   text: string,
   document: AnnotationDocument | null,
-  page?: number
+  page?: number,
+  visibleLabelIds?: ReadonlySet<string>
 ): HighlightRange[] {
   if (!document) return [];
 
@@ -61,6 +62,7 @@ export function annotationHighlightRanges(
 
   for (const annotation of document.annotations) {
     if (page !== undefined && annotation.page !== undefined && annotation.page !== page) continue;
+    if (visibleLabelIds && !visibleLabelIds.has(annotation.labelId)) continue;
 
     const label = labels.get(annotation.labelId);
     if (!label) continue;

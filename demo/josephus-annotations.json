@@ -41,6 +41,13 @@
       "occurrence": 1
     },
     {
+      "id": "ann-person-filius-vespasiani",
+      "labelId": "person",
+      "quote": "filius Vespasiani",
+      "start": 498,
+      "end": 515
+    },
+    {
       "id": "ann-place-hierosolyma",
       "labelId": "place",
       "quote": "Hierosolyma"
@@ -56,9 +63,23 @@
       "quote": "bellum"
     },
     {
+      "id": "ann-conflict-civil-empire",
+      "labelId": "conflict",
+      "quote": "conflictu civili\natque de imperio Romano",
+      "start": 792,
+      "end": 832
+    },
+    {
       "id": "ann-actor-romani",
       "labelId": "actor",
       "quote": "Romani"
+    },
+    {
+      "id": "ann-actor-exercitus-linebreak",
+      "labelId": "actor",
+      "quote": "cum exercitu Romano ad provincias\nvenit",
+      "start": 260,
+      "end": 299
     }
   ]
 }

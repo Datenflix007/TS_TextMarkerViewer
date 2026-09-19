@@ -1,5 +1,6 @@
 import type { HighlightRange } from "../highlighting/textRanges";
 import { nonOverlappingRanges } from "../highlighting/textRanges";
+import type { AnnotationDisplayStyle } from "../annotationDisplay";
 
 export interface TextRenderRequest {
   container: HTMLElement;
@@ -7,6 +8,7 @@ export interface TextRenderRequest {
   ranges: HighlightRange[];
   zoom: number;
   searchMode: boolean;
+  annotationDisplayStyle: AnnotationDisplayStyle;
 }
 
 export interface TextRenderStats {
@@ -23,7 +25,13 @@ export function renderTextDocument(request: TextRenderRequest): TextRenderStats 
   const pre = document.createElement("pre");
   pre.className = "txt-document";
 
-  appendHighlightedText(pre, request.text, request.ranges, request.searchMode);
+  appendHighlightedText(
+    pre,
+    request.text,
+    request.ranges,
+    request.searchMode,
+    request.annotationDisplayStyle
+  );
   page.appendChild(pre);
   request.container.appendChild(page);
 
@@ -37,7 +45,8 @@ function appendHighlightedText(
   container: HTMLElement,
   text: string,
   ranges: HighlightRange[],
-  searchMode: boolean
+  searchMode: boolean,
+  annotationDisplayStyle: AnnotationDisplayStyle
 ): void {
   const visibleRanges = nonOverlappingRanges(ranges);
   let cursor = 0;
@@ -48,12 +57,18 @@ function appendHighlightedText(
     }
 
     const mark = document.createElement("mark");
-    mark.className = searchMode ? "txt-mark txt-mark-search" : "txt-mark txt-mark-annotation";
+    mark.className = searchMode
+      ? "txt-mark txt-mark-search"
+      : `txt-mark txt-mark-annotation txt-mark-annotation-${annotationDisplayStyle}`;
     mark.textContent = text.slice(range.start, range.end);
-    mark.style.background = `${range.color}70`;
+    mark.style.background = searchMode || annotationDisplayStyle === "inline"
+      ? `${range.color}70`
+      : `${range.color}1f`;
     mark.style.setProperty("--label-color", range.color);
+    mark.style.setProperty("--annotation-color", range.color);
     mark.dataset.rangeStart = String(range.start);
     mark.dataset.rangeEnd = String(range.end);
+    mark.dataset.annotationDisplayStyle = searchMode ? "search" : annotationDisplayStyle;
 
     if (searchMode) {
       mark.dataset.searchIndex = String(index + 1);

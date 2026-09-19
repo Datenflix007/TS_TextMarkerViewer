@@ -1,5 +1,6 @@
-import type { AnnotationDocument, DocumentMetadata, DocumentType } from "../core";
+import type { AnnotationDocument, AnnotationLabel, DocumentMetadata, DocumentType } from "../core";
 import { assertAnnotationDocument, cloneAnnotationDocument } from "../core";
+import type { AnnotationDisplayStyle } from "./annotationDisplay";
 import {
   annotationHighlightRanges,
   searchHighlightRanges,
@@ -9,6 +10,7 @@ import { renderPdfDocument, type PdfRenderStats } from "./pdf/PdfRenderer";
 import { renderTextDocument, type TextRenderStats } from "./text/TextRenderer";
 
 export type ViewerMode = "search" | "annotations";
+export type { AnnotationDisplayStyle };
 
 interface RenderSummary {
   pageCount: number;
@@ -182,6 +184,89 @@ const css = `
     background-size: 18px 18px;
   }
 
+  .content-layout {
+    display: grid;
+    grid-template-columns: 178px minmax(0, 1fr);
+    align-items: start;
+    gap: 18px;
+    min-width: min-content;
+  }
+
+  .label-sidebar {
+    position: sticky;
+    top: 0;
+    display: grid;
+    gap: 8px;
+    align-self: start;
+    max-height: calc(78vh - 48px);
+    overflow: auto;
+    padding: 10px;
+    border: 1px solid var(--ts-marker-border-color);
+    border-radius: 8px;
+    background: rgb(255 255 255 / 86%);
+    box-shadow: 0 4px 16px rgb(15 23 42 / 8%);
+  }
+
+  .label-sidebar-title {
+    margin: 0;
+    color: var(--ts-marker-muted-color);
+    font-size: 0.76rem;
+    font-weight: 760;
+    text-transform: uppercase;
+  }
+
+  .label-filter {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 30px;
+    padding: 5px 7px;
+    border: 1px solid #d5dce4;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ts-marker-text-color);
+    text-align: left;
+  }
+
+  .label-filter:hover {
+    background: #f8fafc;
+  }
+
+  .label-filter.is-hidden {
+    background: #f3f4f6;
+    color: #8a939f;
+  }
+
+  .label-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: var(--label-color);
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 92%), 0 0 0 3px var(--label-color);
+  }
+
+  .label-filter.is-hidden .label-swatch {
+    background: #a3aab3;
+    box-shadow: 0 0 0 2px rgb(255 255 255 / 92%), 0 0 0 3px #a3aab3;
+  }
+
+  .label-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .label-state {
+    color: var(--ts-marker-muted-color);
+    font-size: 0.72rem;
+  }
+
+  .label-filter.is-hidden .label-state {
+    color: #8a939f;
+  }
+
   .document-stack {
     display: grid;
     justify-items: center;
@@ -230,7 +315,7 @@ const css = `
     color: inherit;
   }
 
-  .txt-mark-annotation[data-label]::after {
+  .txt-mark-annotation-inline[data-label]::after {
     content: attr(data-label);
     display: inline-block;
     margin-left: 0.32rem;
@@ -243,6 +328,48 @@ const css = `
     font-weight: 720;
     line-height: 1.45;
     vertical-align: text-top;
+  }
+
+  .txt-mark-annotation-bracket {
+    position: relative;
+    display: inline-block;
+    margin-block-start: 1.45em;
+    border-radius: 2px;
+    line-height: 1.16;
+  }
+
+  .txt-mark-annotation-bracket[data-label]::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.48em);
+    transform: translateX(-50%);
+    z-index: 4;
+    padding: 0 0.25rem;
+    border: 1px solid var(--annotation-color);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--annotation-color);
+    font-family: var(--ts-marker-font-family);
+    font-size: 0.63em;
+    font-weight: 760;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
+  }
+
+  .txt-mark-annotation-bracket[data-label]::after {
+    content: "";
+    position: absolute;
+    left: 0.08em;
+    right: 0.08em;
+    bottom: calc(100% + 0.14em);
+    height: 0.42em;
+    border-block-start: 2px solid var(--annotation-color);
+    border-inline-start: 2px solid var(--annotation-color);
+    border-inline-end: 2px solid var(--annotation-color);
+    border-radius: 999px 999px 0 0;
+    pointer-events: none;
   }
 
   .txt-mark-search[data-search-index].active-search {
@@ -287,6 +414,33 @@ const css = `
     box-shadow: 0 1px 3px rgb(15 23 42 / 22%);
   }
 
+  .pdf-bracket-line {
+    position: absolute;
+    height: 7px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+    border-right: 2px solid;
+    border-radius: 999px 999px 0 0;
+    transform: translateY(-100%);
+    z-index: 3;
+  }
+
+  .pdf-bracket-label {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    max-width: 160px;
+    padding: 1px 4px;
+    border: 1px solid;
+    border-radius: 3px;
+    background: #fff;
+    font-size: 10px;
+    font-weight: 760;
+    line-height: 1.2;
+    white-space: nowrap;
+    z-index: 4;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 14%);
+  }
+
   .page-notice {
     position: absolute;
     left: 14px;
@@ -319,6 +473,22 @@ const css = `
       padding: 14px;
     }
 
+    .content-layout {
+      grid-template-columns: 1fr;
+      min-width: 0;
+    }
+
+    .label-sidebar {
+      position: static;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      width: 100%;
+      max-height: none;
+    }
+
+    .label-sidebar-title {
+      grid-column: 1 / -1;
+    }
+
     .txt-page {
       width: 100%;
       padding: calc(34px * var(--ts-viewer-zoom));
@@ -337,6 +507,7 @@ export class TSTextMarkerViewer extends HTMLElement {
   private titleElement!: HTMLSpanElement;
   private fileInput!: HTMLInputElement;
   private modeSelect!: HTMLSelectElement;
+  private annotationStyleSelect!: HTMLSelectElement;
   private searchInput!: HTMLInputElement;
   private matchMetric!: HTMLSpanElement;
   private pageStatus!: HTMLSpanElement;
@@ -351,8 +522,10 @@ export class TSTextMarkerViewer extends HTMLElement {
   private zoomInButton!: HTMLButtonElement;
 
   private mode: ViewerMode = "search";
+  private annotationDisplayStyle: AnnotationDisplayStyle = "inline";
   private searchTerm = "";
   private annotationDocument: AnnotationDocument | null = null;
+  private hiddenLabelIds = new Set<string>();
   private sourceType: DocumentType | null = null;
   private currentText = "";
   private currentPdfData: ArrayBuffer | null = null;
@@ -383,6 +556,11 @@ export class TSTextMarkerViewer extends HTMLElement {
             <select class="mode" aria-label="Modus">
               <option value="search">Suche</option>
               <option value="annotations">Annotationen</option>
+            </select>
+            <span class="label annotation-style-label">Anzeige</span>
+            <select class="annotation-style" aria-label="Annotationsanzeige">
+              <option value="inline">Variante 1</option>
+              <option value="bracket">Variante 2</option>
             </select>
             <span class="spacer"></span>
             <span class="page-status">Seite 0 / 0</span>
@@ -496,12 +674,50 @@ export class TSTextMarkerViewer extends HTMLElement {
   setAnnotationDocument(document: AnnotationDocument): void {
     assertAnnotationDocument(document);
     this.annotationDocument = cloneAnnotationDocument(document);
+    this.hiddenLabelIds.clear();
 
     if (this.mode === "annotations") {
       void this.render();
     } else {
       this.updateToolbarState();
     }
+  }
+
+  /** Switches the visual read-only annotation presentation. */
+  setAnnotationDisplayStyle(style: AnnotationDisplayStyle): void {
+    if (style !== "inline" && style !== "bracket") {
+      throw new Error(`Unsupported annotation display style: ${style}`);
+    }
+
+    this.annotationDisplayStyle = style;
+
+    if (this.initialized) {
+      this.annotationStyleSelect.value = style;
+      this.updateToolbarState();
+    }
+
+    if (this.mode === "annotations") {
+      void this.render();
+    }
+  }
+
+  /** Shows or hides one annotation label without changing the AnnotationDocument. */
+  setAnnotationLabelVisibility(labelId: string, visible: boolean): void {
+    if (visible) {
+      this.hiddenLabelIds.delete(labelId);
+    } else {
+      this.hiddenLabelIds.add(labelId);
+    }
+
+    if (this.sourceType) {
+      void this.render();
+    } else {
+      this.updateToolbarState();
+    }
+  }
+
+  getHiddenAnnotationLabelIds(): string[] {
+    return [...this.hiddenLabelIds];
   }
 
   /** Clears the active search term and removes search highlights. */
@@ -541,11 +757,16 @@ export class TSTextMarkerViewer extends HTMLElement {
     return this.zoom;
   }
 
+  getAnnotationDisplayStyle(): AnnotationDisplayStyle {
+    return this.annotationDisplayStyle;
+  }
+
   private collectElements(): void {
     this.documentArea = this.root.querySelector(".document-area")!;
     this.titleElement = this.root.querySelector(".document-title")!;
     this.fileInput = this.root.querySelector(".file-input")!;
     this.modeSelect = this.root.querySelector(".mode")!;
+    this.annotationStyleSelect = this.root.querySelector(".annotation-style")!;
     this.searchInput = this.root.querySelector(".search")!;
     this.matchMetric = this.root.querySelector(".match-metric")!;
     this.pageStatus = this.root.querySelector(".page-status")!;
@@ -576,6 +797,10 @@ export class TSTextMarkerViewer extends HTMLElement {
 
     this.modeSelect.addEventListener("change", () => {
       this.setMode(this.modeSelect.value as ViewerMode);
+    });
+
+    this.annotationStyleSelect.addEventListener("change", () => {
+      this.setAnnotationDisplayStyle(this.annotationStyleSelect.value as AnnotationDisplayStyle);
     });
 
     this.searchInput.addEventListener("input", () => {
@@ -612,8 +837,14 @@ export class TSTextMarkerViewer extends HTMLElement {
     this.documentArea.innerHTML = `<div class="empty">Dokument wird geladen ...</div>`;
 
     try {
+      const layout = document.createElement("div");
+      layout.className = "content-layout";
+
       const stack = document.createElement("div");
       stack.className = "document-stack";
+      this.renderLabelSidebar(layout);
+      layout.appendChild(stack);
+
       const summary = await this.renderCurrentDocument(stack);
 
       if (token !== this.renderToken) return;
@@ -621,7 +852,7 @@ export class TSTextMarkerViewer extends HTMLElement {
       this.pageCount = summary.pageCount;
       this.currentPage = clamp(this.currentPage || 1, 1, Math.max(summary.pageCount, 1));
       this.searchMatchCount = summary.searchMatches;
-      this.documentArea.replaceChildren(stack);
+      this.documentArea.replaceChildren(layout);
       this.updateToolbarState(summary);
       this.activateSearchMatch(false);
       this.dispatchRendered(summary);
@@ -646,7 +877,8 @@ export class TSTextMarkerViewer extends HTMLElement {
         text: this.currentText,
         ranges,
         zoom: this.zoom,
-        searchMode: this.mode === "search"
+        searchMode: this.mode === "search",
+        annotationDisplayStyle: this.annotationDisplayStyle
       });
 
       return this.summaryFromTextStats(stats, ranges);
@@ -659,7 +891,9 @@ export class TSTextMarkerViewer extends HTMLElement {
         zoom: this.zoom,
         mode: this.mode,
         searchTerm: this.searchTerm,
-        annotationDocument: this.annotationDocument
+        annotationDocument: this.annotationDocument,
+        annotationDisplayStyle: this.annotationDisplayStyle,
+        visibleLabelIds: this.visibleLabelIds()
       });
 
       return this.summaryFromPdfStats(stats);
@@ -678,7 +912,72 @@ export class TSTextMarkerViewer extends HTMLElement {
       return searchHighlightRanges(this.currentText, this.searchTerm);
     }
 
-    return annotationHighlightRanges(this.currentText, this.annotationDocument);
+    return annotationHighlightRanges(
+      this.currentText,
+      this.annotationDocument,
+      undefined,
+      this.visibleLabelIds()
+    );
+  }
+
+  private renderLabelSidebar(container: HTMLElement): void {
+    if (!this.annotationDocument || this.annotationDocument.labels.length === 0) return;
+
+    const sidebar = document.createElement("aside");
+    sidebar.className = "label-sidebar";
+    sidebar.setAttribute("aria-label", "Annotationslabels");
+
+    const title = document.createElement("h3");
+    title.className = "label-sidebar-title";
+    title.textContent = "Labels";
+    sidebar.appendChild(title);
+
+    for (const label of this.annotationDocument.labels) {
+      sidebar.appendChild(this.createLabelFilterButton(label));
+    }
+
+    container.appendChild(sidebar);
+  }
+
+  private createLabelFilterButton(label: AnnotationLabel): HTMLButtonElement {
+    const isHidden = this.hiddenLabelIds.has(label.id);
+    const button = document.createElement("button");
+    button.className = `label-filter${isHidden ? " is-hidden" : ""}`;
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(!isHidden));
+    button.dataset.labelId = label.id;
+    button.title = isHidden
+      ? `${label.name} einblenden`
+      : `${label.name} ausblenden`;
+    button.style.setProperty("--label-color", label.color);
+
+    const swatch = document.createElement("span");
+    swatch.className = "label-swatch";
+
+    const name = document.createElement("span");
+    name.className = "label-name";
+    name.textContent = label.name;
+
+    const state = document.createElement("span");
+    state.className = "label-state";
+    state.textContent = isHidden ? "aus" : "an";
+
+    button.append(swatch, name, state);
+    button.addEventListener("click", () => {
+      this.setAnnotationLabelVisibility(label.id, isHidden);
+    });
+
+    return button;
+  }
+
+  private visibleLabelIds(): ReadonlySet<string> | undefined {
+    if (!this.annotationDocument || this.hiddenLabelIds.size === 0) return undefined;
+
+    return new Set(
+      this.annotationDocument.labels
+        .filter((label) => !this.hiddenLabelIds.has(label.id))
+        .map((label) => label.id)
+    );
   }
 
   private summaryFromTextStats(stats: TextRenderStats, ranges: HighlightRange[]): RenderSummary {
@@ -708,6 +1007,8 @@ export class TSTextMarkerViewer extends HTMLElement {
 
     this.titleElement.textContent = this.metadata?.title ?? this.metadata?.source ?? "Kein Dokument";
     this.modeSelect.value = this.mode;
+    this.annotationStyleSelect.value = this.annotationDisplayStyle;
+    this.annotationStyleSelect.disabled = this.mode !== "annotations" || !hasDocument;
     this.searchInput.value = this.searchTerm;
     this.searchInput.disabled = this.mode !== "search" || !hasDocument;
     this.previousMatchButton.disabled = this.mode !== "search" || this.searchMatchCount < 1;
@@ -780,6 +1081,8 @@ export class TSTextMarkerViewer extends HTMLElement {
         pageCount: this.pageCount,
         currentPage: this.currentPage,
         zoom: this.zoom,
+        annotationDisplayStyle: this.annotationDisplayStyle,
+        hiddenLabelIds: this.getHiddenAnnotationLabelIds(),
         searchMatches: this.searchMatchCount,
         renderedRanges: summary?.renderedRanges ?? 0,
         pagesWithoutTextLayer: summary?.pagesWithoutTextLayer ?? []

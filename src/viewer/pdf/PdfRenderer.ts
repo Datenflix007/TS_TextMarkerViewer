@@ -1,6 +1,7 @@
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { AnnotationDocument } from "../../core";
+import type { AnnotationDisplayStyle } from "../annotationDisplay";
 import {
   annotationHighlightRanges,
   findTextRanges,
@@ -35,6 +36,8 @@ export interface PdfRenderRequest {
   mode: "search" | "annotations";
   searchTerm: string;
   annotationDocument: AnnotationDocument | null;
+  annotationDisplayStyle: AnnotationDisplayStyle;
+  visibleLabelIds?: ReadonlySet<string>;
 }
 
 export interface PdfRenderStats {
@@ -109,14 +112,25 @@ export async function renderPdfDocument(request: PdfRenderRequest): Promise<PdfR
     const pageText = pageTextFromItems(positioned);
     const ranges = request.mode === "search"
       ? searchHighlightRanges(pageText, request.searchTerm)
-      : annotationHighlightRanges(pageText, request.annotationDocument, pageNumber);
+      : annotationHighlightRanges(
+          pageText,
+          request.annotationDocument,
+          pageNumber,
+          request.visibleLabelIds
+        );
 
     if (request.mode === "search") {
       stats.searchMatches += findTextRanges(pageText, request.searchTerm).length;
     }
 
     stats.renderedRanges += ranges.length;
-    drawPdfRanges(highlightLayer, positioned, ranges, request.mode === "search");
+    drawPdfRanges(
+      highlightLayer,
+      positioned,
+      ranges,
+      request.mode === "search",
+      request.annotationDisplayStyle
+    );
   }
 
   return stats;
@@ -159,7 +173,8 @@ function drawPdfRanges(
   layer: HTMLElement,
   items: PositionedTextItem[],
   ranges: HighlightRange[],
-  searchMode: boolean
+  searchMode: boolean,
+  annotationDisplayStyle: AnnotationDisplayStyle
 ): void {
   ranges.forEach((range, rangeIndex) => {
     let labelPlaced = false;
@@ -175,12 +190,16 @@ function drawPdfRanges(
       const width = Math.max(item.width * (endRatio - startRatio), 2);
 
       const mark = document.createElement("div");
-      mark.className = searchMode ? "highlight search-highlight" : "highlight annotation-highlight";
+      const usesBracketStyle = !searchMode && annotationDisplayStyle === "bracket";
+      mark.className = searchMode
+        ? "highlight search-highlight"
+        : `highlight annotation-highlight annotation-highlight-${annotationDisplayStyle}`;
       mark.style.left = `${left}px`;
       mark.style.top = `${item.top}px`;
       mark.style.width = `${width}px`;
       mark.style.height = `${Math.max(item.height, 8)}px`;
       mark.style.background = range.color;
+      mark.style.opacity = usesBracketStyle ? "0.18" : "";
       mark.dataset.rangeStart = String(range.start);
       mark.dataset.rangeEnd = String(range.end);
 
@@ -190,7 +209,28 @@ function drawPdfRanges(
 
       layer.appendChild(mark);
 
-      if (range.label && !labelPlaced) {
+      if (usesBracketStyle) {
+        const bracket = document.createElement("div");
+        bracket.className = "pdf-bracket-line";
+        bracket.style.left = `${left}px`;
+        bracket.style.top = `${Math.max(item.top - 5, 16)}px`;
+        bracket.style.width = `${width}px`;
+        bracket.style.borderColor = range.color;
+        layer.appendChild(bracket);
+      }
+
+      if (range.label && !labelPlaced && usesBracketStyle) {
+        const badge = document.createElement("div");
+        badge.className = "pdf-bracket-label";
+        badge.textContent = range.label;
+        badge.style.left = `${left + width / 2}px`;
+        badge.style.top = `${Math.max(item.top - 18, 8)}px`;
+        badge.style.borderColor = range.color;
+        badge.style.color = range.color;
+        badge.dataset.annotationId = range.annotationId ?? "";
+        layer.appendChild(badge);
+        labelPlaced = true;
+      } else if (range.label && !labelPlaced) {
         const badge = document.createElement("div");
         badge.className = "highlight-label";
         badge.textContent = range.label;

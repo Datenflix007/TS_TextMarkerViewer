@@ -29,9 +29,23 @@ test("captures the documented demo states", async ({ page }) => {
   });
 
   await viewer.locator("select.mode").selectOption("annotations");
-  await expect(viewer.locator(".txt-mark-annotation")).toHaveCount(12);
+  await expect(viewer.locator(".label-filter")).toHaveCount(4);
+  await expect(viewer.locator(".txt-mark-annotation")).toHaveCount(15);
   await page.screenshot({
     path: `${screenshotDir}/viewer-demo-annotations.png`,
+    fullPage: true
+  });
+
+  await viewer.locator('[data-label-id="conflict"]').click();
+  await expect(viewer.locator('[data-label-id="conflict"]')).toHaveClass(/is-hidden/);
+  await expect(viewer.locator(".txt-mark-annotation")).toHaveCount(10);
+  await viewer.locator('[data-label-id="conflict"]').click();
+  await expect(viewer.locator(".txt-mark-annotation")).toHaveCount(15);
+
+  await viewer.locator("select.annotation-style").selectOption("bracket");
+  await expect(viewer.locator(".txt-mark-annotation-bracket")).toHaveCount(15);
+  await page.screenshot({
+    path: `${screenshotDir}/viewer-demo-annotations-bracket.png`,
     fullPage: true
   });
 });

@@ -1,5 +1,7 @@
 # TS_TextMarkerViewer
 
+![TS_TextMarkerViewer Demo UI](docs/images/viewer-demo-annotations.png)
+
 Framework-unabhaengige TypeScript-Web-Component zum Anzeigen von PDF- und TXT-Dokumenten mit Suche und read-only Annotationen.
 
 Der Viewer enthaelt keine Editorlogik: Er erstellt, veraendert, loescht und speichert keine Annotationen. Annotationen werden als `AnnotationDocument` aus dem Core-Modell uebergeben und nur dargestellt.
@@ -45,12 +47,16 @@ loadText(text: string, metadata?: DocumentMetadata): Promise<void>;
 setMode(mode: "search" | "annotations"): void;
 setSearchTerm(term: string): void;
 setAnnotationDocument(document: AnnotationDocument): void;
+setAnnotationDisplayStyle(style: "inline" | "bracket"): void;
+setAnnotationLabelVisibility(labelId: string, visible: boolean): void;
 clearSearch(): void;
 goToPage(page: number): void;
 setZoom(zoom: number): void;
 getCurrentPage(): number;
 getPageCount(): number;
 getZoom(): number;
+getAnnotationDisplayStyle(): "inline" | "bracket";
+getHiddenAnnotationLabelIds(): string[];
 ```
 
 Die Web Component wird automatisch registriert:
@@ -136,7 +142,11 @@ Die Suche ist standardmaessig case-insensitive und markiert alle Treffer neutral
 ```ts
 viewer?.setMode("annotations");
 viewer?.setAnnotationDocument(annotationDocument);
+viewer?.setAnnotationDisplayStyle("bracket");
+viewer?.setAnnotationLabelVisibility("conflict", false);
 ```
+
+Links neben dem Dokument zeigt der Viewer die Labels des `AnnotationDocument`. Ein Klick auf ein Label blendet alle Markierungen dieses Labels aus; das Label wird grau. Ein weiterer Klick blendet es wieder ein.
 
 Annotationen koennen ueber `quote`, `page`, `occurrence` sowie bei TXT ueber `start` und `end` lokalisiert werden. Das Datenmodell enthaelt zudem eine optionale `boundingBox`, damit spaeter exaktere PDF- und OCR-Integrationen moeglich sind.
 
@@ -157,6 +167,10 @@ import type { TSTextMarkerViewer } from "@datenflix/ts-text-marker-viewer";
 ### Annotationen
 
 ![Annotationsmodus](docs/images/viewer-demo-annotations.png)
+
+### Annotationen Variante 2
+
+![Annotationsmodus Variante 2](docs/images/viewer-demo-annotations-bracket.png)
 
 ### Dokumentansicht
 
