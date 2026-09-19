@@ -1,0 +1,31 @@
+{
+  "name": "@datenflix/ts-text-marker-viewer",
+  "version": "0.1.0",
+  "description": "Framework-unabhängiger PDF/TXT Viewer mit Such- und Annotation-Highlights.",
+  "type": "module",
+  "main": "./dist/ts-text-marker-viewer.js",
+  "module": "./dist/ts-text-marker-viewer.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/ts-text-marker-viewer.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite --open /demo/",
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.3.289"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "@types/node": "^24.3.0"
+  }
+}
