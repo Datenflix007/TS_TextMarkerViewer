@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { AnnotationDocument } from "../src/core";
+import type { AnnotationDocument } from "@datenflix007/ts-text-marker-core";
 import {
   annotationHighlightRanges,
-  findTextRanges,
   searchHighlightRanges
 } from "../src/viewer/highlighting/textRanges";
 
@@ -36,12 +35,12 @@ const annotationDocument: AnnotationDocument = {
 };
 
 describe("text range helpers", () => {
-  it("finds search hits", () => {
-    expect(findTextRanges(text, "venit")).toEqual([{ start: 7, end: 12 }]);
-  });
-
-  it("finds multiple case-insensitive search hits", () => {
-    expect(searchHighlightRanges(text, "bellum")).toHaveLength(3);
+  it("converts Core search occurrences into viewer highlight ranges", () => {
+    expect(searchHighlightRanges(text, "bellum")).toEqual([
+      expect.objectContaining({ start: 0, end: 6, color: "#ffeb3b" }),
+      expect.objectContaining({ start: 14, end: 20, color: "#ffeb3b" }),
+      expect.objectContaining({ start: 40, end: 46, color: "#ffeb3b" })
+    ]);
   });
 
   it("locates an annotation by occurrence", () => {

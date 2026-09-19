@@ -3,81 +3,59 @@
 ## Zielstruktur
 
 ```text
-TS_TextMarker_Core
-  - gemeinsame Datentypen
-  - JSON-Datenmodell
-  - Validierung
-  - Serialisierung
-  - dokumentunabhaengige Hilfsfunktionen
-
-TS_TextMarker_Viewer
-  - PDF darstellen
-  - TXT darstellen
-  - vorhandene Annotationen darstellen
-  - Suchtreffer darstellen
-  - Annotation-Labels darstellen
-  - Navigation, Zoom und Dokumentdarstellung
-
-TS_TextMarker_Editor
-  - nutzt Core und Viewer
-  - veraendert AnnotationDocument
-  - exportiert wieder AnnotationDocument
+                 TS_TextMarkerCore
+                         |
+              +----------+----------+
+              v                     v
+     TS_TextMarkerViewer     zukuenftige Module
+              ^
+              |
+     TS_TextMarkerEditor
 ```
 
-Der aktuelle Stand bleibt in einem Repository, ist aber entlang dieser Grenzen strukturiert:
+Fuer den spaeteren Editor gilt:
 
 ```text
-src/
-  core/
-    types/
-    validation/
-    serialization/
-    labels/
-    index.ts
-  viewer/
-    TS_TextMarkerViewer.ts
-    highlighting/
-    pdf/
-    text/
-    index.ts
-  index.ts
+TS_TextMarkerEditor
+       |
+       +-- TS_TextMarkerCore
+       |
+       +-- TS_TextMarkerViewer
 ```
+
+Der Viewer darf deshalb keine Editorlogik enthalten.
 
 ## Core
 
-Core enthaelt das stabile JSON-Modell:
+`TS_TextMarkerCore` ist ein eigenes Package:
+
+```text
+@datenflix007/ts-text-marker-core
+```
+
+Der Core enthaelt:
 
 - `AnnotationDocument`
-- `DocumentMetadata`
-- `AnnotationLabel`
 - `Annotation`
-- optionale `AnnotationBoundingBox`
-
-Ausserdem enthaelt Core:
-
+- `AnnotationLabel`
+- `DocumentMetadata`
+- `BoundingBox`
+- `TextRange`
+- `TextOccurrence`
 - `validateAnnotationDocument`
-- `assertAnnotationDocument`
-- `parseAnnotationDocumentJson`
-- `serializeAnnotationDocument`
-- `cloneAnnotationDocument`
-- `createLabelLookup`
+- `findTextOccurrences`
+- `resolveAnnotationRange`
 - `getAnnotationLabel`
+- `getLabelById`
+- JSON-Serialisierung und weitere reine Utilities
 
-Der Viewer importiert Core-Typen nur ueber die oeffentliche Core-Schnittstelle:
+Der Viewer importiert diese API direkt aus dem Package. Es gibt im Viewer kein eigenes konkurrierendes Annotation-Datenmodell mehr.
 
-```ts
-import type { AnnotationDocument } from "../core";
-```
-
-Dieser Importpfad kann spaeter ohne API-Aenderung durch das Paket ersetzt werden:
-
-```ts
-import type { AnnotationDocument } from "@datenflix/ts-text-marker-core";
-```
+In der lokalen Entwicklungsumgebung loesen `tsconfig` und Vite den Package-Namen auf den benachbarten Checkout `../TS_TextMarkerCore` auf. Der Quellcode selbst verwendet trotzdem keine internen Core-Pfade.
 
 ## Viewer
 
-Der Viewer ist eine read-only Web Component:
+`TS_TextMarkerViewer` ist eine read-only Web Component:
 
 ```html
 <ts-text-marker-viewer></ts-text-marker-viewer>
@@ -91,6 +69,8 @@ Er ist verantwortlich fuer:
 - Treffer- und Annotation-Highlighting
 - PDF-Canvas-Rendering mit Text-/Highlight-Layer
 - TXT-Dokumentseite
+- Annotation-Labels anzeigen
+- Label-Sichtbarkeit im Viewer toggeln
 - Navigation und Zoom
 
 Er ist nicht verantwortlich fuer:
@@ -103,45 +83,102 @@ Er ist nicht verantwortlich fuer:
 - Kommentare bearbeiten
 - Annotationen per Textauswahl erzeugen
 
-Demo-Daten liegen deshalb ausschliesslich in `demo/`.
+## Datenfluss
+
+```text
+Core AnnotationDocument
+        |
+        v
+Viewer validiert mit Core
+        |
+        v
+Viewer loest Textbereiche und Labels mit Core auf
+        |
+        v
+internes RenderHighlight[]
+        |
+        v
+DOM / PDF Overlay
+```
+
+Das interne Render-Modell ist ausschliesslich Darstellung. Es ersetzt nicht das Core-Format und wird nicht nach aussen exportiert.
+
+## Dependency-Richtung
+
+```text
+TS_TextMarkerCore
+        ^
+        |
+TS_TextMarkerViewer
+```
+
+Der Viewer darf Core importieren. Der Core darf weder Viewer-spezifische Logik noch PDF.js, DOM APIs, Canvas oder Editorlogik importieren.
+
+## Suchmodus
+
+Im Suchmodus ruft der Viewer `findTextOccurrences` aus Core auf. Der Viewer entscheidet nur:
+
+- welche CSS-Klasse genutzt wird
+- welche Farbe Suchtreffer erhalten
+- welcher Treffer aktiv ist
+- wie Trefferzahl und Navigation dargestellt werden
+
+Suchmarkierungen sind temporaer und veraendern das `AnnotationDocument` nicht.
+
+## Annotationsmodus
+
+Im Annotationsmodus ruft der Viewer Core-Funktionen auf:
+
+- `validateAnnotationDocument` beim Setzen eines Dokuments
+- `resolveAnnotationRange` fuer Textbereiche
+- `getAnnotationLabel` fuer Name und Farbe
+
+Annotationfarben kommen ausschliesslich ueber Labels:
+
+```text
+annotation.labelId -> label.id -> label.color
+```
+
+Der Viewer erwartet keine separate Farbe in einer Annotation.
+
+## Viewer-spezifische Typen
+
+Diese Typen bleiben bewusst im Viewer:
+
+- `ViewerMode`
+- `AnnotationDisplayStyle`
+- `PdfRenderRequest`
+- `PdfRenderStats`
+- `TextRenderRequest`
+- `TextRenderStats`
+- `HighlightRange`
+- PDF-Textpositionen und Overlay-Elemente
+
+Sie beschreiben Darstellung und UI-Verhalten, nicht das gemeinsame Austauschformat.
 
 ## Editor-Vorbereitung
 
-Der spaetere Editor soll getrennt entstehen:
+Der spaetere Editor soll das Core-Dokument besitzen und den Viewer nur aktualisieren:
 
-```text
-TS_TextMarker_Editor
-    |
-    v
-nutzt TS_TextMarker_Viewer
-    |
-    v
-liest und veraendert AnnotationDocument
-    |
-    v
-exportiert wieder AnnotationDocument
+```ts
+viewer.setAnnotationDocument(
+  editorState.annotationDocument
+);
 ```
 
-Geplante Editor-Funktionen:
+Wenn der Editor eine Annotation veraendert:
 
-- Text auswaehlen
-- Annotation hinzufuegen
-- Annotation bearbeiten
-- Annotation loeschen
-- Label auswaehlen
-- Kommentar hinzufuegen
-- JSON importieren
-- JSON exportieren
+```text
+Editor
+  |
+  v
+AnnotationDocument aendern
+  |
+  v
+viewer.setAnnotationDocument(updatedDocument)
+  |
+  v
+Viewer rendert neu
+```
 
-Diese Funktionen sind bewusst nicht im Viewer implementiert.
-
-## Spaetere Repository-Trennung
-
-Fuer getrennte Repositories waeren diese Schritte noetig:
-
-1. `src/core` in ein eigenes Paket `@datenflix/ts-text-marker-core` verschieben.
-2. Core-Paket mit eigener `package.json`, `tsconfig`, Tests und Build-Pipeline versehen.
-3. Viewer-Imports von `../core` auf `@datenflix/ts-text-marker-core` umstellen.
-4. Viewer-Paket als `@datenflix/ts-text-marker-viewer` mit Abhaengigkeit auf Core veroeffentlichen.
-5. Demo- und Integrationstests gegen die Paketimporte laufen lassen.
-6. Editor in ein drittes Paket verschieben und nur von Core und Viewer abhaengig machen.
+Der Viewer bleibt dabei read-only.

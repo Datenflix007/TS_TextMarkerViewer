@@ -4,7 +4,16 @@
     "noEmit": false,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {
+      "@datenflix007/ts-text-marker-core": [
+        "../TS_TextMarkerCore/dist/index.d.ts"
+      ],
+      "@datenflix/ts-text-marker-viewer": [
+        "src/index.ts"
+      ]
+    }
   },
   "include": ["src"]
 }

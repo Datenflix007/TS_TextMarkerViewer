@@ -4,15 +4,24 @@
 
 Framework-unabhaengige TypeScript-Web-Component zum Anzeigen von PDF- und TXT-Dokumenten mit Suche und read-only Annotationen.
 
-Der Viewer enthaelt keine Editorlogik: Er erstellt, veraendert, loescht und speichert keine Annotationen. Annotationen werden als `AnnotationDocument` aus dem Core-Modell uebergeben und nur dargestellt.
+Der Viewer basiert auf `TS_TextMarkerCore`. Das gemeinsame Datenmodell, Validierung, Label-Aufloesung und Text-Matching kommen aus `@datenflix007/ts-text-marker-core`. Der Viewer interpretiert dieses Modell und stellt es dar; er erstellt, veraendert, loescht und speichert keine Annotationen.
 
 ## Installation
 
+Aktuell aus GitHub:
+
 ```bash
-npm install
+npm install github:Datenflix007/TS_TextMarkerViewer
 ```
 
-Spaeter vorgesehen:
+`TS_TextMarkerCore` wird vom Viewer als Dependency installiert. Wenn ein Projekt Core-Typen direkt verwendet, koennen beide Repositories explizit installiert werden:
+
+```bash
+npm install github:Datenflix007/TS_TextMarkerCore
+npm install github:Datenflix007/TS_TextMarkerViewer
+```
+
+Spaeter als npm-Package:
 
 ```bash
 npm install @datenflix/ts-text-marker-viewer
@@ -39,6 +48,57 @@ await viewer?.loadText("bellum et pax", {
 });
 ```
 
+## Core-Beispiel
+
+```ts
+import "@datenflix/ts-text-marker-viewer";
+
+import type {
+  AnnotationDocument
+} from "@datenflix007/ts-text-marker-core";
+
+const viewer = document.querySelector(
+  "ts-text-marker-viewer"
+);
+
+const annotations: AnnotationDocument = {
+  version: "1.0",
+
+  document: {
+    id: "demo",
+    title: "Josephus Demo",
+    type: "txt"
+  },
+
+  labels: [
+    {
+      id: "person",
+      name: "Person",
+      color: "#7e57c2"
+    }
+  ],
+
+  annotations: [
+    {
+      id: "ann-1",
+      labelId: "person",
+      quote: "Vespasianus"
+    }
+  ]
+};
+
+await viewer?.loadText(
+  "Vespasianus ...",
+  annotations.document
+);
+
+viewer?.setAnnotationDocument(
+  annotations
+);
+```
+
+Labels liefern Anzeigename und Farbe. Annotationen referenzieren Labels ueber `labelId`; dadurch werden Farbe und Anzeigename nicht redundant in jeder Annotation gespeichert.
+
 ## Oeffentliche API
 
 ```ts
@@ -59,6 +119,8 @@ getAnnotationDisplayStyle(): "inline" | "bracket";
 getHiddenAnnotationLabelIds(): string[];
 ```
 
+`DocumentMetadata` und `AnnotationDocument` kommen aus `@datenflix007/ts-text-marker-core`.
+
 Die Web Component wird automatisch registriert:
 
 ```ts
@@ -66,41 +128,6 @@ if (!customElements.get("ts-text-marker-viewer")) {
   customElements.define("ts-text-marker-viewer", TSTextMarkerViewer);
 }
 ```
-
-## Verwendung Mit Core
-
-Das zentrale JSON-Modell liegt in `src/core` und ist so vorbereitet, dass es spaeter als `@datenflix/ts-text-marker-core` ausgelagert werden kann.
-
-```ts
-import type {
-  AnnotationDocument
-} from "@datenflix/ts-text-marker-core";
-
-const annotations: AnnotationDocument = {
-  version: "1.0",
-  document: {
-    id: "josephus-demo",
-    title: "Flavius Josephus - Bellum Judaicum",
-    type: "txt"
-  },
-  labels: [
-    { id: "person", name: "Person", color: "#7e57c2" },
-    { id: "place", name: "Ort", color: "#ef5350" },
-    { id: "conflict", name: "Konflikt", color: "#ff9800" }
-  ],
-  annotations: [
-    {
-      id: "ann-001",
-      labelId: "person",
-      quote: "Vespasianus"
-    }
-  ]
-};
-
-viewer?.setAnnotationDocument(annotations);
-```
-
-Labels liefern Anzeigename und Farbe. Annotationen referenzieren Labels ueber `labelId`; dadurch werden Farbe und Anzeigename nicht redundant in jeder Annotation gespeichert.
 
 ## PDF Laden
 
@@ -135,7 +162,7 @@ viewer?.setMode("search");
 viewer?.setSearchTerm("bellum");
 ```
 
-Die Suche ist standardmaessig case-insensitive und markiert alle Treffer neutral gelb. Annotationfarben werden dadurch nicht veraendert.
+Die Suche verwendet `findTextOccurrences` aus `@datenflix007/ts-text-marker-core`. Der Viewer markiert die Treffer neutral gelb, zeigt die Trefferzahl und erlaubt Navigation. Das `AnnotationDocument` bleibt dabei unveraendert.
 
 ## Annotationen
 
@@ -146,9 +173,11 @@ viewer?.setAnnotationDisplayStyle("bracket");
 viewer?.setAnnotationLabelVisibility("conflict", false);
 ```
 
-Links neben dem Dokument zeigt der Viewer die Labels des `AnnotationDocument`. Ein Klick auf ein Label blendet alle Markierungen dieses Labels aus; das Label wird grau. Ein weiterer Klick blendet es wieder ein.
+`setAnnotationDocument` validiert das Dokument mit `validateAnnotationDocument` aus dem Core und wirft bei ungueltigen Daten eine lesbare Fehlermeldung.
 
-Annotationen koennen ueber `quote`, `page`, `occurrence` sowie bei TXT ueber `start` und `end` lokalisiert werden. Das Datenmodell enthaelt zudem eine optionale `boundingBox`, damit spaeter exaktere PDF- und OCR-Integrationen moeglich sind.
+Textpositionen werden mit `resolveAnnotationRange` aufgeloest. Labels werden mit `getAnnotationLabel` aufgeloest. Der Viewer erzeugt daraus nur ein internes Render-Modell fuer DOM- und PDF-Highlights.
+
+Links neben dem Dokument zeigt der Viewer die Labels des `AnnotationDocument`. Ein Klick auf ein Label blendet alle Markierungen dieses Labels aus; das Label wird grau. Ein weiterer Klick blendet es wieder ein.
 
 ## Demo
 
@@ -156,7 +185,7 @@ Die Demo unter `demo/` ist wie eine Consumer-Anwendung aufgebaut. `demo/main.ts`
 
 ```ts
 import "@datenflix/ts-text-marker-viewer";
-import type { AnnotationDocument } from "@datenflix/ts-text-marker-core";
+import type { AnnotationDocument } from "@datenflix007/ts-text-marker-core";
 import type { TSTextMarkerViewer } from "@datenflix/ts-text-marker-viewer";
 ```
 
@@ -185,32 +214,38 @@ npm run screenshots
 ## Architektur
 
 ```text
-                    +-----------------------+
-                    | TS_TextMarker_Core    |
-                    | JSON / Types / Schema |
-                    +-----------+-----------+
-                                |
-                    +-----------v-----------+
-                    | TS_TextMarker_Viewer  |
-                    | PDF / TXT / Highlights|
-                    +-----------+-----------+
-                                |
-                    +-----------v-----------+
-                    | TS_TextMarker_Editor  |
-                    | Bearbeitung           |
-                    +-----------------------+
++--------------------------+
+| TS_TextMarkerCore        |
+|                          |
+| AnnotationDocument       |
+| Annotation               |
+| Labels                   |
+| Matching                 |
+| Validation               |
++------------+-------------+
+             |
+             v
++--------------------------+
+| TS_TextMarkerViewer      |
+|                          |
+| PDF / TXT                |
+| Search                   |
+| Highlighting             |
+| Labels                   |
++--------------------------+
 ```
 
-- Core enthaelt Datenmodell, Validierung, Serialisierung und dokumentunabhaengige Hilfsfunktionen.
-- Viewer ist read-only und importiert Core-Typen ueber `src/core`.
-- Editor wird spaeter auf Viewer und Core aufgebaut und bleibt getrennt vom Viewer.
+- `TS_TextMarkerCore` enthaelt das gemeinsame Datenmodell.
+- `TS_TextMarkerViewer` interpretiert dieses Datenmodell und stellt es read-only dar.
+- PDF-Rendering, Canvas, Text-Layer, Zoom, Navigation und Highlight-Overlay bleiben Viewer-spezifisch.
+- Ein spaeterer `TS_TextMarkerEditor` kann ein `AnnotationDocument` pflegen und den Viewer mit `viewer.setAnnotationDocument(updatedDocument)` aktualisieren.
 
 Weitere Details stehen in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Entwicklung
 
 ```bash
-npm run dev
+npm install
 npm run lint
 npm run build
 npm test
@@ -225,3 +260,5 @@ just dev
 just check
 just screenshots
 ```
+
+Die lokale Entwicklungsumgebung erwartet einen benachbarten Checkout von `../TS_TextMarkerCore`. Code und Demo importieren weiterhin den Package-Namen `@datenflix007/ts-text-marker-core`; `tsconfig` und Vite loesen diesen Namen lokal auf den Core-Checkout auf.

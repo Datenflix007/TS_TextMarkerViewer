@@ -25,6 +25,7 @@
     "screenshots": "playwright test tests/screenshots.spec.ts --project=edge"
   },
   "dependencies": {
+    "@datenflix007/ts-text-marker-core": "github:Datenflix007/TS_TextMarkerCore#main",
     "pdfjs-dist": "^6.3.289"
   },
   "devDependencies": {

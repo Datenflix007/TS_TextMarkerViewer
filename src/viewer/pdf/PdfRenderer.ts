@@ -1,10 +1,9 @@
 import * as pdfjsLib from "pdfjs-dist";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import type { AnnotationDocument } from "../../core";
+import type { AnnotationDocument } from "@datenflix007/ts-text-marker-core";
 import type { AnnotationDisplayStyle } from "../annotationDisplay";
 import {
   annotationHighlightRanges,
-  findTextRanges,
   searchHighlightRanges,
   type HighlightRange
 } from "../highlighting/textRanges";
@@ -120,7 +119,7 @@ export async function renderPdfDocument(request: PdfRenderRequest): Promise<PdfR
         );
 
     if (request.mode === "search") {
-      stats.searchMatches += findTextRanges(pageText, request.searchTerm).length;
+      stats.searchMatches += ranges.length;
     }
 
     stats.renderedRanges += ranges.length;

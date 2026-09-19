@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { AnnotationDocument } from "../src/core";
+import type { AnnotationDocument } from "@datenflix007/ts-text-marker-core";
 import "../src/index";
 import type { TSTextMarkerViewer } from "../src/viewer";
 
@@ -78,6 +78,24 @@ describe("TSTextMarkerViewer", () => {
     const mark = viewer.shadowRoot?.querySelector<HTMLElement>(".txt-mark-annotation");
     expect(mark?.textContent).toBe("bellum");
     expect(mark?.dataset.label).toBe("Konflikt");
+  });
+
+  it("rejects invalid Core AnnotationDocuments with readable errors", () => {
+    const viewer = createViewer();
+    const invalidDocument = {
+      ...annotationDocument,
+      annotations: [
+        {
+          id: "ann-invalid",
+          labelId: "missing",
+          quote: "bellum"
+        }
+      ]
+    } as unknown as AnnotationDocument;
+
+    expect(() => viewer.setAnnotationDocument(invalidDocument)).toThrow(
+      /Invalid AnnotationDocument: .*\.labelId/
+    );
   });
 
   it("switches to the bracket annotation display style", async () => {

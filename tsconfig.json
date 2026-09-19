@@ -17,11 +17,11 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@datenflix007/ts-text-marker-core": [
+        "../TS_TextMarkerCore/src/index.ts"
+      ],
       "@datenflix/ts-text-marker-viewer": [
         "src/index.ts"
-      ],
-      "@datenflix/ts-text-marker-core": [
-        "src/core/index.ts"
       ]
     },
     "strict": true,

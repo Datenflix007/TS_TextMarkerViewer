@@ -1,5 +1,9 @@
-import type { AnnotationDocument, AnnotationLabel, DocumentMetadata, DocumentType } from "../core";
-import { assertAnnotationDocument, cloneAnnotationDocument } from "../core";
+import type {
+  AnnotationDocument,
+  AnnotationLabel,
+  DocumentMetadata
+} from "@datenflix007/ts-text-marker-core";
+import { validateAnnotationDocument } from "@datenflix007/ts-text-marker-core";
 import type { AnnotationDisplayStyle } from "./annotationDisplay";
 import {
   annotationHighlightRanges,
@@ -11,6 +15,8 @@ import { renderTextDocument, type TextRenderStats } from "./text/TextRenderer";
 
 export type ViewerMode = "search" | "annotations";
 export type { AnnotationDisplayStyle };
+
+type DocumentType = NonNullable<DocumentMetadata["type"]>;
 
 interface RenderSummary {
   pageCount: number;
@@ -633,6 +639,7 @@ export class TSTextMarkerViewer extends HTMLElement {
     this.currentText = text;
     this.currentPdfData = null;
     this.metadata = {
+      ...metadata,
       id: metadata?.id ?? "text-document",
       title: metadata?.title ?? "Textdokument",
       source: metadata?.source,
@@ -672,8 +679,15 @@ export class TSTextMarkerViewer extends HTMLElement {
 
   /** Replaces the read-only annotation document used by annotation mode. */
   setAnnotationDocument(document: AnnotationDocument): void {
-    assertAnnotationDocument(document);
-    this.annotationDocument = cloneAnnotationDocument(document);
+    const validation = validateAnnotationDocument(document);
+    if (!validation.valid) {
+      const details = validation.errors
+        .map((error) => `${error.path}: ${error.message}`)
+        .join("; ");
+      throw new Error(`Invalid AnnotationDocument: ${details}`);
+    }
+
+    this.annotationDocument = document;
     this.hiddenLabelIds.clear();
 
     if (this.mode === "annotations") {

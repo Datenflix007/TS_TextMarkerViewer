@@ -1,3 +1,5 @@
+set windows-shell := ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
+
 install:
     npm install
 
@@ -18,4 +20,4 @@ screenshots:
     npm run screenshots
 
 clean:
-    rm -rf dist node_modules/.vite
+    Remove-Item -LiteralPath "dist", "node_modules/.vite" -Recurse -Force -ErrorAction SilentlyContinue
